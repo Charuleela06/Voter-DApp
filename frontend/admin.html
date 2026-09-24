@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal | Decentralized Voting</title>
+
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Ethers.js v6 Library CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="navbar" role="banner">
+    <div class="nav-container">
+      <div class="brand">
+        <a href="index.html" class="brand-link"
+          style="display:flex; align-items:center; gap:12px; text-decoration:none">
+          <div class="brand-icon">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div class="brand-text">
+            <h1>VoteChain Admin</h1>
+            <span class="sub-tag">Election Management Portal</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="nav-actions">
+        <!-- Return to Voter Ballot Page Button -->
+        <a href="index.html" class="btn btn-outline">
+          <i class="fa-solid fa-arrow-left"></i>
+          Back to Voter Ballot
+        </a>
+
+        <!-- Dark / Light Theme Toggle Button -->
+        <button class="btn-theme-toggle" id="btnThemeToggle" aria-label="Toggle Dark/Light Theme"
+          title="Toggle Dark/Light Mode">
+          <i class="fa-solid fa-moon" id="themeIcon"></i>
+          <span id="themeLabel">Dark Mode</span>
+        </button>
+
+        <!-- Network Connection Status Badge -->
+        <div class="network-badge" id="networkBadge">
+          <span class="status-dot connected" id="networkDot"></span>
+          <span id="networkName">System Online</span>
+        </div>
+
+        <!-- Technical Specs Modal Button -->
+        <button class="btn btn-outline" id="btnDevSpecs" title="View Blockchain & Technical Specs">
+          <i class="fa-solid fa-code"></i>
+          Tech Specs
+        </button>
+
+        <!-- Connect Wallet Button & Wallet Control Pill -->
+        <div class="wallet-control">
+          <button class="btn btn-primary btn-connect" id="btnConnectWallet">
+            <i class="fa-solid fa-wallet"></i>
+            Connect Wallet
+          </button>
+          <div class="wallet-pill hidden" id="walletPill">
+            <span class="wallet-avatar" id="walletAvatar">0x</span>
+            <span class="wallet-address" id="walletAddressDisplay">0x00...0000</span>
+            <button class="btn-copy" id="btnCopyAddress" title="Copy Wallet Address">
+              <i class="fa-solid fa-copy"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="main-content" role="main">
+
+    <!-- Admin Hero Header -->
+    <section class="election-hero-card">
+      <div class="hero-top-row">
+        <div class="election-title-group">
+          <h2 id="electionTitleDisplay">Admin Control Panel</h2>
+          <p class="election-subtitle" id="electionDescDisplay">Manage election schedule, voting status, and candidate
+            registrations.</p>
+        </div>
+
+        <div class="status-pill-box">
+          <span class="status-label">Admin Access Status</span>
+          <div class="status-indicator" id="adminAccessIndicator">
+            <span class="status-pulse"></span>
+            <span id="adminAccessText">Checking Access...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Global Notification Status Banner -->
+    <div class="status-banner hidden" id="statusBanner" role="alert">
+      <div class="status-icon" id="statusIcon">⚡</div>
+      <div class="status-content">
+        <h4 id="statusTitle">Processing Admin Action</h4>
+        <p id="statusMessage">Please confirm the transaction in MetaMask...</p>
+        <div class="tx-hash-link hidden" id="txHashWrapper">
+          Tx Hash: <a href="#" target="_blank" id="txHashLink">0x...</a>
+        </div>
+      </div>
+      <button class="status-close" id="btnCloseStatus" aria-label="Close message">&times;</button>
+    </div>
+
+    <!-- Admin Access Denied Notice (Shown for non-owner wallets) -->
+    <div class="admin-notice-box hidden" id="adminNoticeBox">
+      <i class="fa-solid fa-lock icon-lock"></i>
+      <div>
+        <h4>Admin Access Restricted</h4>
+        <p id="adminNoticeText">Only the Election Admin wallet can perform admin management.</p>
+      </div>
+    </div>
+
+    <!-- Admin Controls Section (Enabled when connected wallet is Owner) -->
+    <section class="section-container" id="adminControlsSection">
+      <div class="section-header">
+        <div>
+          <h3>Election Controls</h3>
+          <p class="section-desc">Manage election status, schedule, and registered candidates.</p>
+        </div>
+      </div>
+
+      <div class="admin-controls-grid disabled-area" id="adminControlsArea">
+
+        <!-- Card 1: Voting Status Toggle -->
+        <div class="admin-card">
+          <h4><i class="fa-solid fa-power-off"></i> Manual Voting Toggle</h4>
+          <p>Manually open or pause voting status for this election.</p>
+          <div class="admin-btn-group">
+            <button class="btn btn-success" id="btnAdminStart">
+              <i class="fa-solid fa-play"></i> Start / Open Election
+            </button>
+            <button class="btn btn-danger" id="btnAdminStop">
+              <i class="fa-solid fa-pause"></i> Stop / Close Election
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 2: Election Schedule Settings (12-Hour AM/PM Selector) -->
+        <div class="admin-card">
+          <h4><i class="fa-regular fa-clock"></i> Schedule Start & End Time</h4>
+          <p>Set voting start and end times with explicit 12-hour AM / PM dropdown selectors.</p>
+          <form id="formSetSchedule" class="admin-form">
+
+            <!-- Start Time Selector Row -->
+            <div class="form-group">
+              <label>Election Start Date & Time</label>
+              <div class="time-picker-row">
+                <input type="date" id="startDateInput" class="time-picker-date" required>
+                <input type="number" id="startHourInput" class="time-picker-num" min="1" max="12" placeholder="10"
+                  required>
+                <span class="time-picker-colon">:</span>
+                <input type="number" id="startMinInput" class="time-picker-num" min="0" max="59" placeholder="00"
+                  required>
+                <select id="startAmPmInput" class="time-picker-ampm">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- End Time Selector Row -->
+            <div class="form-group">
+              <label>Election End Date & Time</label>
+              <div class="time-picker-row">
+                <input type="date" id="endDateInput" class="time-picker-date" required>
+                <input type="number" id="endHourInput" class="time-picker-num" min="1" max="12" placeholder="04"
+                  required>
+                <span class="time-picker-colon">:</span>
+                <input type="number" id="endMinInput" class="time-picker-num" min="0" max="59" placeholder="00"
+                  required>
+                <select id="endAmPmInput" class="time-picker-ampm">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="btnSetScheduleSubmit" style="margin-top: 4px;">
+              <i class="fa-solid fa-calendar-check"></i> Update Schedule
+            </button>
+          </form>
+        </div>
+
+        <!-- Card 3: Candidate Registration Form -->
+        <div class="admin-card" style="grid-column: span 2;">
+          <h4><i class="fa-solid fa-user-plus"></i> Candidate Registration</h4>
+          <p>Add a new candidate to the ballot before voting starts.</p>
+          <form id="formAddCandidate" class="admin-form">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+              <div class="form-group">
+                <label for="inputCandName">Candidate Name</label>
+                <input type="text" id="inputCandName" placeholder="e.g., Evan Wright" required>
+              </div>
+              <div class="form-group">
+                <label for="inputCandDesc">Description / Motto</label>
+                <input type="text" id="inputCandDesc" placeholder="e.g., Campus Green Energy & Tech" required>
+              </div>
+              <div class="form-group">
+                <label for="selectCandAvatar">Avatar Icon</label>
+                <select id="selectCandAvatar">
+                  <option value="alice">Avatar 1 (Alice)</option>
+                  <option value="bob">Avatar 2 (Bob)</option>
+                  <option value="charlie">Avatar 3 (Charlie)</option>
+                  <option value="diana">Avatar 4 (Diana)</option>
+                  <option value="general">Avatar 5 (General)</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="btnAddCandSubmit" style="margin-top: 8px;">
+              <i class="fa-solid fa-plus"></i> Register Candidate
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Registered Candidates Overview -->
+    <section class="section-container">
+      <div class="section-header">
+        <div>
+          <h3>Registered Candidates</h3>
+          <p class="section-desc">Registered candidates for this election.</p>
+        </div>
+      </div>
+
+      <div class="results-card">
+        <div class="results-bars" id="adminCandList">
+          <!-- Candidate List items will be populated by admin.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Election Results Section (Admin View) -->
+    <section class="section-container" id="adminResultsSection">
+      <div class="section-header">
+        <div>
+          <h3>Election Results</h3>
+          <p class="section-desc" id="adminResultsStateDesc">Live results based on votes recorded on the blockchain.</p>
+        </div>
+        <div class="status-indicator active" id="adminResultsStatusBadge">
+          <span class="status-pulse"></span>
+          <span id="adminResultsStatusText">🟢 ELECTION IN PROGRESS</span>
+        </div>
+      </div>
+
+      <div class="results-card">
+        <!-- Winner / Tie Announcement Banner -->
+        <div class="winner-banner hidden" id="adminWinnerBanner">
+          <div class="winner-banner-icon" id="adminWinnerIcon"><i class="fa-solid fa-trophy"></i></div>
+          <div class="winner-banner-content">
+            <span class="winner-label" id="adminWinnerBadgeLabel">🏆 ELECTION RESULT</span>
+            <h4 id="adminWinnerBannerTitle">Winner Announced</h4>
+            <p id="adminWinnerBannerSub">Loading results...</p>
+          </div>
+        </div>
+
+        <!-- Summary Statistics Row -->
+        <div class="results-summary-row" style="margin-bottom: 24px;">
+          <div>
+            <span class="res-num" id="adminResTotalVotes">0</span>
+            <span class="res-lbl">TOTAL VOTES</span>
+          </div>
+          <div>
+            <span class="res-num" id="adminResCandidates">0</span>
+            <span class="res-lbl">CANDIDATES</span>
+          </div>
+          <div>
+            <span class="res-num" id="adminResWallets">0</span>
+            <span class="res-lbl">PARTICIPATING WALLETS</span>
+          </div>
+        </div>
+
+        <!-- Candidate Results Breakdown Bars -->
+        <div class="results-bars" id="adminResultsBars">
+          <!-- Populated by admin.js -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Blockchain & Technical Specs Modal -->
+  <div class="modal-backdrop hidden" id="techSpecsModal" role="dialog" aria-modal="true"
+    aria-labelledby="modalTechTitle">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="modalTechTitle"><i class="fa-solid fa-code"></i> Smart Contract & Technical Specs</h3>
+        <button class="modal-close" id="btnCloseTechSpecsModal" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+
+        <div class="info-grid" style="margin-top:0">
+          <div class="info-card">
+            <div class="info-header">
+              <i class="fa-solid fa-cube icon-lg"></i>
+              <h4>Smart Contract Info</h4>
+            </div>
+            <ul class="info-list">
+              <li><strong>Contract Name:</strong> <code>Voting.sol</code></li>
+              <li><strong>Contract Address:</strong> <span class="code-pill"
+                  id="displayContractAddress">Loading...</span></li>
+              <li><strong>Contract Owner:</strong> <span class="code-pill" id="displayContractOwner">Loading...</span>
+              </li>
+              <li><strong>Network:</strong> Hardhat Localhost (Chain ID 31337)</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btnCloseTechSpecsBtn">Close Specs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <p>Decentralized Voting System • Admin Management Portal • <button class="btn-link"
+          id="btnFooterTechSpecs">Technical Specs</button></p>
+    </div>
+  </footer>
+
+  <script src="contractConfig.js"></script>
+  <script src="admin.js"></script>
+</body>
+
+</html>

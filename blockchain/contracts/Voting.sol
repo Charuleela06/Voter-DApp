@@ -3,42 +3,50 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Decentralized Voting System
- * @notice College Mini-Project: A simple, transparent smart contract for casting and counting votes on Ethereum.
- * @dev Stores candidates, records votes per wallet address, prevents double-voting, and emits real-time events.
+ * @notice Upgraded College Mini-Project Smart Contract for Blockchain-Based Elections.
+ * @dev Enforces 1-wallet-1-vote, scheduled election start/end times, admin access control, and candidate management.
  */
 contract Voting {
-    // Structure to represent a Candidate
+    // Candidate structure with description and avatar image identifier
     struct Candidate {
         uint256 id;
         string name;
+        string description;
+        string avatarUrl;
         uint256 voteCount;
     }
 
     // Owner of the voting contract
     address public owner;
 
-    // Total number of candidates created
-    uint256 public candidatesCount;
+    // Election Metadata
+    string public electionTitle;
+    string public electionDescription;
 
-    // Total number of votes cast overall
+    // Scheduled Start and End Timestamps (Unix epoch seconds)
+    uint256 public startTime;
+    uint256 public endTime;
+
+    // Total counts
+    uint256 public candidatesCount;
     uint256 public totalVotesCast;
 
-    // Status of the election (active or closed)
+    // Manual election active toggle (controlled by contract owner)
     bool public votingActive;
 
-    // Dynamic array containing all candidates
+    // Array containing all registered candidates
     Candidate[] public candidates;
 
-    // Mapping from candidate ID (1-indexed) to array index (0-indexed)
+    // Mapping from candidate ID (1-indexed) to candidates array index (0-indexed)
     mapping(uint256 => uint256) private candidateIdToIndex;
 
-    // Mapping to track whether an Ethereum address has cast a vote
+    // Mapping tracking whether an Ethereum wallet address has voted
     mapping(address => bool) public hasVoted;
 
-    // Mapping to store which candidate an address voted for (optional transparency helper)
+    // Mapping storing the candidate ID voted for by a wallet address
     mapping(address => uint256) public voterChoice;
 
-    // Event emitted whenever a vote is successfully cast on the blockchain
+    // Web3 Events
     event Voted(
         address indexed voter,
         uint256 indexed candidateId,
@@ -47,71 +55,120 @@ contract Voting {
         uint256 timestamp
     );
 
-    // Event emitted when election status changes
     event VotingStatusChanged(bool indexed isActive);
+    event ElectionTimeUpdated(uint256 startTime, uint256 endTime);
+    event CandidateAdded(uint256 indexed candidateId, string name, string description, string avatarUrl);
 
-    // Custom modifier to restrict access to contract owner
+    // Modifier to restrict functions to contract owner
     modifier onlyOwner() {
         require(msg.sender == owner, "Only contract owner can perform this action");
         _;
     }
 
     /**
-     * @dev Constructor initializes the election with predefined candidate names.
-     * @param candidateNames List of candidate names to register upon deployment.
+     * @dev Constructor initializes the election title, schedule, and initial candidates.
      */
-    constructor(string[] memory candidateNames) {
-        require(candidateNames.length > 0, "At least one candidate is required");
+    constructor(
+        string memory _title,
+        string memory _description,
+        uint256 _startTime,
+        uint256 _durationSeconds,
+        string[] memory _candidateNames,
+        string[] memory _candidateDescriptions,
+        string[] memory _candidateAvatars
+    ) {
+        require(bytes(_title).length > 0, "Election title is required");
+        require(_candidateNames.length > 0, "At least one candidate is required");
+        require(
+            _candidateNames.length == _candidateDescriptions.length &&
+            _candidateNames.length == _candidateAvatars.length,
+            "Candidate array lengths must match"
+        );
+
         owner = msg.sender;
+        electionTitle = _title;
+        electionDescription = _description;
         votingActive = true;
 
-        for (uint256 i = 0; i < candidateNames.length; i++) {
-            _addCandidate(candidateNames[i]);
+        // If startTime is 0, default to current block timestamp
+        startTime = _startTime == 0 ? block.timestamp : _startTime;
+        endTime = startTime + (_durationSeconds == 0 ? 7 days : _durationSeconds);
+
+        for (uint256 i = 0; i < _candidateNames.length; i++) {
+            _addCandidateInternal(
+                _candidateNames[i],
+                _candidateDescriptions[i],
+                _candidateAvatars[i]
+            );
         }
     }
 
     /**
-     * @dev Internal function to register a new candidate.
-     * @param _name Name of the candidate.
+     * @dev Internal helper function to register a candidate.
      */
-    function _addCandidate(string memory _name) private {
+    function _addCandidateInternal(
+        string memory _name,
+        string memory _description,
+        string memory _avatarUrl
+    ) private {
         candidatesCount++;
         Candidate memory newCandidate = Candidate({
             id: candidatesCount,
             name: _name,
+            description: _description,
+            avatarUrl: _avatarUrl,
             voteCount: 0
         });
         candidates.push(newCandidate);
         candidateIdToIndex[candidatesCount] = candidates.length - 1;
+
+        emit CandidateAdded(candidatesCount, _name, _description, _avatarUrl);
+    }
+
+    /**
+     * @notice Allows owner to register a new candidate before voting begins.
+     */
+    function addCandidate(
+        string memory _name,
+        string memory _description,
+        string memory _avatarUrl
+    ) external onlyOwner {
+        require(bytes(_name).length > 0, "Candidate name cannot be empty");
+        require(totalVotesCast == 0, "Cannot add candidates after voting has started");
+        
+        _addCandidateInternal(_name, _description, _avatarUrl);
     }
 
     /**
      * @notice Casts a vote for a candidate specified by ID.
-     * @dev Enforces 1 vote per wallet, valid candidate ID, and active election status.
-     * @param _candidateId The ID of the candidate (1, 2, 3, etc.).
+     * @param _candidateId Candidate ID (1-indexed).
      */
     function vote(uint256 _candidateId) external {
-        // Rule 1: Check if election is active
-        require(votingActive, "Voting is currently closed");
+        // Security Rule 1: Check manual active toggle
+        require(votingActive, "Voting is currently closed by election administrator");
 
-        // Rule 2: Check if voter has already cast a vote
+        // Security Rule 2: Check scheduled timing window
+        require(block.timestamp >= startTime, "Voting has not started yet");
+        require(block.timestamp <= endTime, "Voting period has ended");
+
+        // Security Rule 3: 1 Wallet = 1 Vote check
         require(!hasVoted[msg.sender], "You have already voted! Each wallet can vote only once.");
 
-        // Rule 3: Validate candidate ID bounds
-        require(_candidateId > 0 && _candidateId <= candidatesCount, "Invalid candidate ID.");
+        // Security Rule 4: Validate candidate ID bounds
+        require(_candidateId > 0 && _candidateId <= candidatesCount, "Invalid candidate ID selected");
 
-        // Fetch candidate index in array
+        // Fetch candidate array index
         uint256 index = candidateIdToIndex[_candidateId];
 
         // Increment candidate vote count and global vote counter
         candidates[index].voteCount += 1;
         totalVotesCast += 1;
 
-        // Mark sender wallet address as having voted
+        // Record voter status
         hasVoted[msg.sender] = true;
         voterChoice[msg.sender] = _candidateId;
 
-        // Emit real-time Web3 event for frontend UI updates
+        // Emit real-time Web3 event
         emit Voted(
             msg.sender,
             _candidateId,
@@ -122,52 +179,90 @@ contract Voting {
     }
 
     /**
-     * @notice Fetches all candidates with their current details and vote counts.
-     * @return An array of Candidate structs.
+     * @notice Helper function to check if voting is currently open based on status and timestamps.
+     */
+    function isVotingOpen() public view returns (bool) {
+        return votingActive && block.timestamp >= startTime && block.timestamp <= endTime;
+    }
+
+    /**
+     * @notice Fetches all candidates with their details and current vote counts.
      */
     function getAllCandidates() external view returns (Candidate[] memory) {
         return candidates;
     }
 
     /**
-     * @notice Fetches single candidate details by candidate ID.
-     * @param _candidateId Candidate ID.
-     * @return id Candidate ID.
-     * @return name Candidate Name.
-     * @return voteCount Current vote count.
+     * @notice Fetches a single candidate by ID.
      */
-    function getCandidate(uint256 _candidateId) external view returns (uint256 id, string memory name, uint256 voteCount) {
+    function getCandidate(uint256 _candidateId)
+        external
+        view
+        returns (
+            uint256 id,
+            string memory name,
+            string memory description,
+            string memory avatarUrl,
+            uint256 voteCount
+        )
+    {
         require(_candidateId > 0 && _candidateId <= candidatesCount, "Invalid candidate ID");
         uint256 index = candidateIdToIndex[_candidateId];
         Candidate memory c = candidates[index];
-        return (c.id, c.name, c.voteCount);
+        return (c.id, c.name, c.description, c.avatarUrl, c.voteCount);
     }
 
     /**
-     * @notice Checks if a given wallet address has already voted.
-     * @param _voter Wallet address to check.
-     * @return True if voted, false otherwise.
+     * @notice Checks if a wallet address has voted.
      */
     function hasUserVoted(address _voter) external view returns (bool) {
         return hasVoted[_voter];
     }
 
     /**
-     * @notice Fetches summary stats for the voting dashboard.
-     * @return totalCandidates Total number of candidates.
-     * @return totalVotes Total votes cast.
-     * @return isActive Current status of voting.
+     * @notice Returns comprehensive election details for the dashboard.
      */
-    function getElectionSummary() external view returns (uint256 totalCandidates, uint256 totalVotes, bool isActive) {
-        return (candidatesCount, totalVotesCast, votingActive);
+    function getElectionSummary()
+        external
+        view
+        returns (
+            string memory title,
+            string memory description,
+            uint256 totalCandidates,
+            uint256 totalVotes,
+            bool isActive,
+            uint256 startTimestamp,
+            uint256 endTimestamp,
+            address contractOwner
+        )
+    {
+        return (
+            electionTitle,
+            electionDescription,
+            candidatesCount,
+            totalVotesCast,
+            isVotingOpen(),
+            startTime,
+            endTime,
+            owner
+        );
     }
 
     /**
-     * @notice Toggle voting status (Owner only feature for project demo).
-     * @param _active True to open voting, false to close.
+     * @notice Toggle manual voting active status (Owner only).
      */
     function setVotingActive(bool _active) external onlyOwner {
         votingActive = _active;
         emit VotingStatusChanged(_active);
+    }
+
+    /**
+     * @notice Update election start and end timestamps (Owner only).
+     */
+    function setElectionTimestamps(uint256 _startTime, uint256 _endTime) external onlyOwner {
+        require(_endTime > _startTime, "End time must be after start time");
+        startTime = _startTime;
+        endTime = _endTime;
+        emit ElectionTimeUpdated(_startTime, _endTime);
     }
 }
