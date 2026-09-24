@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decentralized Voting System | Blockchain DApp</title>
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Ethers.js v6 Library CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-check-to-slot">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+            </svg>
+          </i>
+        </div>
+        <div class="brand-text">
+          <h1>VoteChain AI</h1>
+          <span class="sub-tag">Decentralized College Voting System</span>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <!-- Network Badge -->
+        <div class="network-badge" id="networkBadge">
+          <span class="status-dot disconnected"></span>
+          <span id="networkName">Not Connected</span>
+        </div>
+
+        <!-- Help Guide Button -->
+        <button class="btn btn-outline" id="btnHelpGuide">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          MetaMask Guide
+        </button>
+
+        <!-- Connect Wallet Button / Wallet Pill -->
+        <div class="wallet-control">
+          <button class="btn btn-primary btn-connect" id="btnConnectWallet">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
+            Connect Wallet
+          </button>
+          <div class="wallet-pill hidden" id="walletPill">
+            <span class="wallet-avatar" id="walletAvatar">0x</span>
+            <span class="wallet-address" id="walletAddressDisplay">0x00...0000</span>
+            <button class="btn-copy" id="btnCopyAddress" title="Copy Wallet Address">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Container -->
+  <main class="main-content">
+    
+    <!-- Hero & Election Banner -->
+    <section class="hero-card">
+      <div class="hero-body">
+        <div class="hero-tag">
+          <span class="badge badge-accent"><i class="fa-solid fa-shield-halved"></i> Immutable & Transparent</span>
+          <span class="badge badge-success"><i class="fa-solid fa-lock"></i> 1 Wallet = 1 Vote</span>
+        </div>
+        <h2>Annual Student Council Election</h2>
+        <p>
+          Cast your vote directly on the Ethereum local blockchain smart contract. 
+          Your vote is cryptographically verified, permanently recorded, and publicly auditable.
+        </p>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-label">Total Candidates</span>
+          <span class="metric-value" id="statCandidateCount">--</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Total Votes Cast</span>
+          <span class="metric-value highlight" id="statTotalVotes">--</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Voting Status</span>
+          <span class="metric-value status-active" id="statVotingStatus">Checking...</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Your Wallet Eligibility</span>
+          <span class="metric-value" id="statUserEligibility">Connect Wallet</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Alert / Transaction Status Banner -->
+    <div class="status-banner hidden" id="statusBanner">
+      <div class="status-icon" id="statusIcon">⚡</div>
+      <div class="status-content">
+        <h4 id="statusTitle">Processing Transaction</h4>
+        <p id="statusMessage">Please confirm the transaction in MetaMask...</p>
+        <div class="tx-hash-link hidden" id="txHashWrapper">
+          Tx Hash: <a href="#" target="_blank" id="txHashLink">0x...</a>
+        </div>
+      </div>
+      <button class="status-close" id="btnCloseStatus">&times;</button>
+    </div>
+
+    <!-- Candidate List Section -->
+    <section class="section-container">
+      <div class="section-header">
+        <div>
+          <h3>Candidates</h3>
+          <p class="section-desc">Select a candidate below and click "Cast Vote" to execute a smart contract transaction.</p>
+        </div>
+        <button class="btn btn-secondary" id="btnRefresh">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          Refresh Results
+        </button>
+      </div>
+
+      <!-- Candidate Cards Grid -->
+      <div class="candidate-grid" id="candidateGrid">
+        <!-- Candidate Cards will be rendered dynamically by app.js -->
+        <div class="loading-spinner-container">
+          <div class="spinner"></div>
+          <p>Connecting to Smart Contract & Loading Candidates...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Election Results & Analytics -->
+    <section class="section-container">
+      <div class="section-header">
+        <div>
+          <h3>Live Election Analytics</h3>
+          <p class="section-desc">Real-time vote distribution calculated directly from Solidity smart contract state variables.</p>
+        </div>
+      </div>
+
+      <div class="results-card">
+        <div class="results-bars" id="resultsBars">
+          <!-- Results progress bars will be populated by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Smart Contract & Deployment Technical Details -->
+    <section class="section-container info-grid">
+      <div class="info-card">
+        <div class="info-header">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+          <h4>Smart Contract Info</h4>
+        </div>
+        <ul class="info-list">
+          <li><strong>Contract Name:</strong> <code>Voting.sol</code></li>
+          <li><strong>Contract Address:</strong> <span class="code-pill" id="displayContractAddress">Loading...</span></li>
+          <li><strong>Network:</strong> Hardhat Localhost (Chain ID 31337)</li>
+          <li><strong>Language:</strong> Solidity v0.8.24</li>
+        </ul>
+      </div>
+
+      <div class="info-card">
+        <div class="info-header">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <h4>Security Features</h4>
+        </div>
+        <ul class="info-list">
+          <li>🔒 <strong>Double Voting Prevention:</strong> Mapping tracks msg.sender</li>
+          <li>⚡ <strong>Event Emitting:</strong> Real-time <code>Voted</code> Web3 logs</li>
+          <li>🛡️ <strong>Bounds Validation:</strong> Rejects non-existent candidate IDs</li>
+          <li>🔑 <strong>Self-Custody:</strong> User retains private key in MetaMask</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <!-- MetaMask Setup Guide Modal -->
+  <div class="modal-backdrop hidden" id="helpModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-plug"></i> Connecting MetaMask to Local Hardhat Blockchain</h3>
+        <button class="modal-close" id="btnCloseModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="guide-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Start Hardhat Local Network</h4>
+            <p>Ensure your local blockchain node is running in the terminal:</p>
+            <pre><code>cd blockchain
+npx hardhat node</code></pre>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Add Custom RPC Network to MetaMask</h4>
+            <p>In MetaMask, click network dropdown &gt; <strong>Add a network</strong> &gt; <strong>Add network manually</strong>:</p>
+            <ul class="guide-sublist">
+              <li><strong>Network Name:</strong> Hardhat Localhost</li>
+              <li><strong>RPC URL:</strong> <code>http://127.0.0.1:8545</code></li>
+              <li><strong>Chain ID:</strong> <code>31337</code></li>
+              <li><strong>Currency Symbol:</strong> <code>ETH</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Import Test Wallet Account into MetaMask</h4>
+            <p>Copy one of Hardhat's default test private keys below to test voting from different accounts:</p>
+            
+            <div class="key-box">
+              <span class="key-title">Account #0 (Deployer / Voter A):</span>
+              <code>0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80</code>
+            </div>
+
+            <div class="key-box">
+              <span class="key-title">Account #1 (Voter B):</span>
+              <code>0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d</code>
+            </div>
+
+            <div class="key-box">
+              <span class="key-title">Account #2 (Voter C):</span>
+              <code>0x5de4111ffa1ea8d2a5e045f0962d300a1172d28735a79a32c270f90a576e4136</code>
+            </div>
+            
+            <p class="tip-text"><i class="fa-solid fa-lightbulb"></i> Tip: Switch accounts in MetaMask to demonstrate that different accounts can vote once, but the same account cannot vote twice!</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btnCloseModalBtn">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <p>Decentralized Voting System | College Mini-Project | Powered by Solidity, Hardhat & ethers.js</p>
+    </div>
+  </footer>
+
+  <!-- App Configuration & Main Logic Scripts -->
+  <script src="contractConfig.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

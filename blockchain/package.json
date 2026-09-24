@@ -1,0 +1,19 @@
+{
+  "name": "decentralized-voting-blockchain",
+  "version": "1.0.0",
+  "description": "Smart contract for Decentralized Voting System using Hardhat and Solidity",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost"
+  },
+  "keywords": ["blockchain", "solidity", "hardhat", "ethereum", "voting", "dapp"],
+  "author": "College Mini Project",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.0"
+  }
+}
