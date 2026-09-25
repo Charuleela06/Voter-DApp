@@ -1,0 +1,23 @@
+# Ignore node_modules directories
+node_modules/
+frontend/node_modules/
+
+# Ignore Hardhat build artifacts and cache
+blockchain/artifacts/
+blockchain/cache/
+
+# Ignore compiled contract JSON files
+blockchain/artifacts/**/*.json
+
+# Ignore any log files
+*.log
+
+# Ignore temporary files
+*.tmp
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+
+# Ignore environment files
+.env

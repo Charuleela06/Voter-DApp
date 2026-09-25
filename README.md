@@ -281,4 +281,4 @@ Hardhat provides pre-funded local test accounts for development. Their private k
 
 ## ⚠️ Educational Scope & Disclaimer
 
-This project is built as an **Educational College Mini-Project** demonstrating Web3 DApp development, smart contract security, EVM state management, and modern responsive frontend design. Test private keys included in documentation are for local development on Hardhat Localhost (`Chain ID 31337`) only.
+This project is built as an **Educational College Mini-Project** demonstrating Web3 DApp development, smart contract security, EVM state management, and modern responsive frontend design. Test private keys included in documentation are for local development on Hardhat Localhost only.
